@@ -60,9 +60,12 @@ pytest --headed
 
 - `pyproject.toml` — project metadata and pytest configuration
 - `requirements.txt` — installable test dependencies
-- `tests/test_example.py` — sample Playwright test
+- `tests/test_example.py` — simple Playwright test example
+- `tests/test_homepage.py` — a page-object-style test for momo homepage search
+- `tests/pages/homepage.py` — page object for the homepage search bar
 
 ## Notes
 
-- The sample test uses the `page` fixture provided by `pytest-playwright`.
-- If you want to run a single test, use `pytest tests/test_example.py`.
+- The tests use the `page` fixture provided by `pytest-playwright`.
+- To run a single test, use `pytest tests/test_homepage.py::TestSearchBar::test_homepage_search_bar_placeholder`
+- To run tests with a visible browser, use `pytest --headed`.
