@@ -224,3 +224,4 @@ playwright-report/
 
 # ai generated code
 .claude/
+.playwright-mcp/
