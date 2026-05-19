@@ -1,3 +1,17 @@
+"""
+Search bar tests for the momo homepage.
+
+Scope: black-box frontend verification — we interact with the search bar and observe
+whether the site:
+  1. Navigates to the correct search result page
+  2. Displays results relevant to the search keyword
+  3. Shows a no-results banner for garbage/non-existent keywords
+  4. Triggers auto-suggestions containing the typed keyword
+  5. Handles consecutive searches from the result page correctly
+
+Tests are parametrized to cover English keywords, Chinese keywords, and multi-word queries.
+"""
+
 import logging
 
 import pytest
@@ -159,7 +173,7 @@ class TestSearchBar:
             1. Verify the browser is on the homepage.
             2. Search for kw_before and verify the search result page loads.
             3. From the result page, type kw_after into the search box and press Enter.
-            4. Wait for navigation to complete, then verify the new result page URL contains kw_after.
+            4. Wait for nav to complete, then verify the new result page URL contains kw_after.
             5. Switch to column (list) view.
             6. Verify all visible products are relevant to kw_after.
         """

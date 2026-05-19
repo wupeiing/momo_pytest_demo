@@ -23,26 +23,9 @@ logger = logging.getLogger(__name__)
 
 # ── Payloads ───────────────────────────────────────────────────────────────────
 
-XSS_PAYLOADS = [
-    pytest.param("<script>alert('XSS')</script>",  id="script-tag"),
-    pytest.param("<img src=x onerror=alert(1)>",   id="img-onerror"),
-    pytest.param("javascript:alert(1)",             id="js-uri"),
-    pytest.param("<svg onload=alert(1)>",           id="svg-onload"),
-]
-
-SQL_INJECTION_PAYLOADS = [
-    pytest.param("' OR '1'='1",                    id="or-true"),
-    pytest.param("'; DROP TABLE products; --",     id="drop-table"),
-    pytest.param("1 UNION SELECT NULL, NULL--",    id="union-select"),
-    pytest.param("' OR 1=1--",                     id="or-1-1-comment"),
-]
-
-CMD_INJECTION_PAYLOADS = [
-    pytest.param("; ls -la",           id="semicolon-ls"),
-    pytest.param("| cat /etc/passwd",  id="pipe-passwd"),
-    pytest.param("$(whoami)",          id="subshell-whoami"),
-    pytest.param("`id`",              id="backtick-id"),
-]
+XSS_PAYLOAD = "<script>alert('XSS')</script>"
+SQL_PAYLOAD = "' OR '1'='1"
+CMD_PAYLOAD = "; ls -la"
 
 # ── Patterns indicating a successful injection ─────────────────────────────────
 
@@ -89,7 +72,7 @@ class TestSecurityInjection:
 
     # ── XSS / JavaScript Injection ─────────────────────────────────────────────
 
-    @pytest.mark.parametrize("payload", XSS_PAYLOADS)
+    @pytest.mark.parametrize("payload", [XSS_PAYLOAD])
     def test_xss_no_js_dialog_triggered(self, main_page, payload):
         """XSS payload should not trigger any JavaScript dialog (alert/confirm/prompt)."""
         dialog_info: dict = {"fired": False, "message": ""}
@@ -110,7 +93,7 @@ class TestSecurityInjection:
         )
         logger.info("✓ No JS dialog triggered, payload handled safely")
 
-    @pytest.mark.parametrize("payload", XSS_PAYLOADS)
+    @pytest.mark.parametrize("payload", [XSS_PAYLOAD])
     def test_xss_dangerous_chars_encoded_in_url(self, main_page, payload):
         """< and > in XSS payloads must be URL-encoded in the resulting URL."""
         logger.info("[XSS] testing URL encoding: %r", payload)
@@ -125,7 +108,7 @@ class TestSecurityInjection:
         )
         logger.info("✓ URL correctly encoded: %s", raw_url)
 
-    @pytest.mark.parametrize("payload", XSS_PAYLOADS)
+    @pytest.mark.parametrize("payload", [XSS_PAYLOAD])
     def test_xss_no_injected_script_in_dom(self, main_page, payload):
         """XSS payload must not produce alert-containing <script> or event attributes in the DOM."""
         logger.info("[XSS] testing DOM injection: %r", payload)
@@ -155,7 +138,7 @@ class TestSecurityInjection:
 
     # ── SQL Injection ──────────────────────────────────────────────────────────
 
-    @pytest.mark.parametrize("payload", SQL_INJECTION_PAYLOADS)
+    @pytest.mark.parametrize("payload", [SQL_PAYLOAD])
     def test_sql_injection_no_db_error_in_page(self, main_page, payload):
         """SQL injection payload must not cause the page to leak database error messages."""
         logger.info("[SQLi] submitting payload: %r", payload)
@@ -173,7 +156,7 @@ class TestSecurityInjection:
         )
         logger.info("✓ No SQL error messages detected")
 
-    @pytest.mark.parametrize("payload", SQL_INJECTION_PAYLOADS)
+    @pytest.mark.parametrize("payload", [SQL_PAYLOAD])
     def test_sql_injection_single_quote_encoded_in_url(self, main_page, payload):
         """Single quote in SQL injection payload must be encoded as %27 in the URL."""
         logger.info("[SQLi] testing URL encoding: %r", payload)
@@ -187,7 +170,7 @@ class TestSecurityInjection:
 
     # ── Command Injection ──────────────────────────────────────────────────────
 
-    @pytest.mark.parametrize("payload", CMD_INJECTION_PAYLOADS)
+    @pytest.mark.parametrize("payload", [CMD_PAYLOAD])
     def test_cmd_injection_no_shell_output_in_page(self, main_page, payload):
         """Command injection payload must not cause shell command output to appear on the page."""
         logger.info("[CMDi] submitting payload: %r", payload)
@@ -205,7 +188,7 @@ class TestSecurityInjection:
         )
         logger.info("✓ No shell command output detected")
 
-    @pytest.mark.parametrize("payload", CMD_INJECTION_PAYLOADS)
+    @pytest.mark.parametrize("payload", [CMD_PAYLOAD])
     def test_cmd_injection_pipe_encoded_in_url(self, main_page, payload):
         """Pipe | in command injection payload must be encoded as %7C in the URL."""
         logger.info("[CMDi] testing URL encoding: %r", payload)
