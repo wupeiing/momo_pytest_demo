@@ -1,6 +1,5 @@
 import re
 import logging
-import time
 
 # Keep only ASCII letters, digits, and CJK ideographs — strip everything else
 # (dots, hyphens, spaces, punctuation, etc.) so "j.k" == "j k" == "jk"

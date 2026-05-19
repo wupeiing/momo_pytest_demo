@@ -11,13 +11,13 @@ These tests verify the site is NOT vulnerable; a passing suite means
 each payload was handled safely.
 """
 
+import logging
 import re
+
 import pytest
-from urllib.parse import unquote
 from playwright.sync_api import Page, Dialog
 
 from libs.pages.homepage import HomePageSearchBar
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def _do_search(page: Page, keyword: str) -> None:
     home.click_search_button()
     try:
         page.wait_for_load_state("networkidle", timeout=10000)
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         pass  # continue even if networkidle times out (slow pages)
 
 
@@ -91,66 +91,53 @@ class TestSecurityInjection:
 
     @pytest.mark.parametrize("payload", XSS_PAYLOADS)
     def test_xss_no_js_dialog_triggered(self, main_page, payload):
-        """XSS payload 不應觸發任何 JavaScript dialog（alert / confirm / prompt）。
-
-        判斷依據：Playwright 的 dialog 事件若被觸發，代表 JS 成功執行，即 XSS 成立。
-        """
+        """XSS payload should not trigger any JavaScript dialog (alert/confirm/prompt)."""
         dialog_info: dict = {"fired": False, "message": ""}
 
         def handle(dlg: Dialog) -> None:
             dialog_info["fired"] = True
             dialog_info["message"] = dlg.message
-            logger.warning(f"[XSS] JS dialog 被觸發！訊息: '{dlg.message}'")
+            logger.warning("[XSS] JS dialog triggered! message: '%s'", dlg.message)
             dlg.dismiss()
 
         main_page.on("dialog", handle)
 
-        logger.info(f"[XSS] 輸入 payload: {payload!r}")
+        logger.info("[XSS] submitting payload: %r", payload)
         _do_search(main_page, payload)
 
         assert not dialog_info["fired"], (
-            f"XSS 注入成功：偵測到 JS dialog，訊息='{dialog_info['message']}'"
+            f"XSS succeeded: JS dialog detected, message='{dialog_info['message']}'"
         )
-        logger.info("✓ 未觸發 JS dialog，payload 已被安全處理")
+        logger.info("✓ No JS dialog triggered, payload handled safely")
 
     @pytest.mark.parametrize("payload", XSS_PAYLOADS)
     def test_xss_dangerous_chars_encoded_in_url(self, main_page, payload):
-        """XSS payload 中的 < > 必須在 URL 中被正確 URL 編碼，不能以原始字元出現。
-
-        反射型 XSS 的必要條件之一是 payload 以未編碼形式出現在 URL 裡，
-        進而被 server-side template engine 原樣輸出到 HTML。
-        """
-        logger.info(f"[XSS] 測試 URL 編碼: {payload!r}")
+        """< and > in XSS payloads must be URL-encoded in the resulting URL."""
+        logger.info("[XSS] testing URL encoding: %r", payload)
         _do_search(main_page, payload)
 
         raw_url = main_page.url
         assert "<" not in raw_url, (
-            f"URL 中出現未編碼的 '<'，存在反射型 XSS 風險: {raw_url}"
+            f"Unencoded '<' found in URL, reflected XSS risk: {raw_url}"
         )
         assert ">" not in raw_url, (
-            f"URL 中出現未編碼的 '>'，存在反射型 XSS 風險: {raw_url}"
+            f"Unencoded '>' found in URL, reflected XSS risk: {raw_url}"
         )
-        logger.info(f"✓ URL 已正確編碼: {raw_url}")
+        logger.info("✓ URL correctly encoded: %s", raw_url)
 
     @pytest.mark.parametrize("payload", XSS_PAYLOADS)
     def test_xss_no_injected_script_in_dom(self, main_page, payload):
-        """XSS payload 不應在 DOM 中生成含有 alert 的 <script> 或事件屬性。
-
-        即使 URL 編碼正確，若 server 在回應 HTML 時沒有做 HTML-escape，
-        payload 仍可能被瀏覽器解析並執行，此測試直接掃描渲染後的 DOM。
-        """
-        logger.info(f"[XSS] 測試 DOM 注入: {payload!r}")
+        """XSS payload must not produce alert-containing <script> or event attributes in the DOM."""
+        logger.info("[XSS] testing DOM injection: %r", payload)
         _do_search(main_page, payload)
 
         injected: list = main_page.evaluate("""
             () => {
                 const hits = [];
-                // <script> 含有 alert 或 XSS 字樣
                 document.querySelectorAll('script').forEach(s => {
                     if ((s.textContent || '').match(/alert|XSS/i))
                         hits.push('script: ' + s.textContent.slice(0, 120));
                 });
-                // 元素帶有 onerror / onload 且含 alert
                 document.querySelectorAll('[onerror],[onload]').forEach(el => {
                     const v = (el.getAttribute('onerror') || '') +
                               (el.getAttribute('onload') || '');
@@ -162,20 +149,16 @@ class TestSecurityInjection:
         """)
 
         assert len(injected) == 0, (
-            f"DOM 中發現注入的危險元素，XSS 可能已執行: {injected}"
+            f"Dangerous elements found in DOM, XSS may have executed: {injected}"
         )
-        logger.info("✓ DOM 中無注入的危險元素")
+        logger.info("✓ No injected dangerous elements in DOM")
 
     # ── SQL Injection ──────────────────────────────────────────────────────────
 
     @pytest.mark.parametrize("payload", SQL_INJECTION_PAYLOADS)
     def test_sql_injection_no_db_error_in_page(self, main_page, payload):
-        """SQL injection payload 不應使頁面洩漏資料庫錯誤訊息。
-
-        若頁面出現 SQL 錯誤字串，代表 payload 有機會到達資料庫層且造成異常，
-        同時洩漏了後端技術細節，屬於嚴重安全問題。
-        """
-        logger.info(f"[SQLi] 輸入 payload: {payload!r}")
+        """SQL injection payload must not cause the page to leak database error messages."""
+        logger.info("[SQLi] submitting payload: %r", payload)
         _do_search(main_page, payload)
 
         page_text = main_page.locator("body").inner_text()
@@ -186,36 +169,28 @@ class TestSecurityInjection:
         ]
 
         assert not found, (
-            f"頁面中偵測到 SQL 錯誤訊息，可能洩漏資料庫資訊 — 命中 pattern: {found}"
+            f"SQL error message detected in page, possible DB info leak — matched: {found}"
         )
-        logger.info("✓ 未偵測到 SQL 錯誤訊息")
+        logger.info("✓ No SQL error messages detected")
 
     @pytest.mark.parametrize("payload", SQL_INJECTION_PAYLOADS)
     def test_sql_injection_single_quote_encoded_in_url(self, main_page, payload):
-        """SQL injection payload 中的單引號 ' 在 URL 中必須被編碼為 %27。
-
-        單引號是 SQL injection 最常見的觸發字元，若其原始形式出現在 URL 中
-        且後端未做參數化查詢，可能直接造成注入。
-        """
-        logger.info(f"[SQLi] 測試 URL 編碼: {payload!r}")
+        """Single quote in SQL injection payload must be encoded as %27 in the URL."""
+        logger.info("[SQLi] testing URL encoding: %r", payload)
         _do_search(main_page, payload)
 
         raw_url = main_page.url
         assert "'" not in raw_url, (
-            f"URL 中出現未編碼的單引號 \"'\"，可能存在 SQL Injection 風險: {raw_url}"
+            f"Unencoded single quote found in URL, SQL Injection risk: {raw_url}"
         )
-        logger.info(f"✓ 單引號已正確編碼，URL: {raw_url}")
+        logger.info("✓ Single quote correctly encoded, URL: %s", raw_url)
 
     # ── Command Injection ──────────────────────────────────────────────────────
 
     @pytest.mark.parametrize("payload", CMD_INJECTION_PAYLOADS)
     def test_cmd_injection_no_shell_output_in_page(self, main_page, payload):
-        """Command injection payload 不應使頁面顯示任何 shell 指令執行結果。
-
-        若頁面出現 /etc/passwd 內容、id 指令輸出或 ls 目錄列表等，
-        代表後端將搜尋字串傳遞給了 shell 執行，屬於嚴重 RCE 漏洞。
-        """
-        logger.info(f"[CMDi] 輸入 payload: {payload!r}")
+        """Command injection payload must not cause shell command output to appear on the page."""
+        logger.info("[CMDi] submitting payload: %r", payload)
         _do_search(main_page, payload)
 
         page_text = main_page.locator("body").inner_text()
@@ -226,24 +201,20 @@ class TestSecurityInjection:
         ]
 
         assert not found, (
-            f"頁面中偵測到疑似 shell 指令輸出，可能存在 Command Injection 漏洞 — 命中 pattern: {found}"
+            f"Possible shell command output on page, Command Injection risk — matched: {found}"
         )
-        logger.info("✓ 未偵測到 shell 指令輸出")
+        logger.info("✓ No shell command output detected")
 
     @pytest.mark.parametrize("payload", CMD_INJECTION_PAYLOADS)
     def test_cmd_injection_pipe_encoded_in_url(self, main_page, payload):
-        """Command injection payload 中的 pipe | 在 URL 中必須被編碼為 %7C。
-
-        pipe 字元是最常見的命令串接符，若以原始形式出現在 URL path 中
-        且後端未做 sanitization，可能被傳遞給 shell 執行。
-        """
-        logger.info(f"[CMDi] 測試 URL 編碼: {payload!r}")
+        """Pipe | in command injection payload must be encoded as %7C in the URL."""
+        logger.info("[CMDi] testing URL encoding: %r", payload)
         _do_search(main_page, payload)
 
         raw_url = main_page.url
-        # 只檢查 scheme 之後的部分（host + path + query），scheme 本身不含 |
+        # Only check after scheme (host + path + query); scheme itself never contains |
         path_and_query = raw_url.split("://", 1)[-1]
         assert "|" not in path_and_query, (
-            f"URL 中出現未編碼的 '|'，可能存在 Command Injection 風險: {raw_url}"
+            f"Unencoded '|' found in URL, Command Injection risk: {raw_url}"
         )
-        logger.info(f"✓ pipe 字元已正確編碼，URL: {raw_url}")
+        logger.info("✓ Pipe character correctly encoded, URL: %s", raw_url)

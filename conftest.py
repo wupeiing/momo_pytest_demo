@@ -26,12 +26,12 @@ def base_url(request):
 
 @pytest.fixture
 def blank_page(page):
-    """空白 browser，不預先導向任何頁面。"""
+    """Blank browser, no pre-navigation."""
     return page
 
 
 @pytest.fixture
-def main_page(page, base_url):
-    """直接進入首頁 /main/Main.jsp。"""
+def main_page(page, base_url):  # pylint: disable=redefined-outer-name
+    """Directly enter the main page /main/Main.jsp."""
     page.goto(base_url + MAIN_PAGE_PATH)
     return page

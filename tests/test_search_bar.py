@@ -1,12 +1,12 @@
-from libs.pages.homepage import HomePageSearchBar
-from libs.pages.search_result import SearchResultPage
-import time
-import pytest
-from playwright.sync_api import expect
-from urllib.parse import unquote
 import logging
 
+import pytest
+
+from libs.pages.homepage import HomePageSearchBar
+from libs.pages.search_result import SearchResultPage
+
 logger = logging.getLogger(__name__)
+
 
 class TestSearchBar:
 
@@ -44,12 +44,14 @@ class TestSearchBar:
         search_res.wait_for_page_loaded()
         assert search_res.is_on_search_result_page(keyword), "Search result page failed to load"
 
-        search_res.click_columnType()
+        search_res.click_column_type()
 
         logger.info("Verifying search results relevance ...")
 
         invalid_res = search_res.get_invalid_results(keyword)
-        assert len(invalid_res) == 0, f"{len(invalid_res)} search results not related to keyword: {invalid_res}"
+        assert len(invalid_res) == 0, (
+            f"{len(invalid_res)} search results not related to keyword: {invalid_res}"
+        )
         logger.info("✓ Search results are relevant to keyword")
 
     @pytest.mark.parametrize("keyword", ["macbook", "iphone 15", "衛生紙 舒潔"])
@@ -68,14 +70,15 @@ class TestSearchBar:
         search_res.wait_for_page_loaded()
         assert search_res.is_on_search_result_page(keyword), "Search result page failed to load"
 
-        search_res.click_columnType()
+        search_res.click_column_type()
 
         logger.info("Verifying search results relevance ...")
 
         invalid_res = search_res.get_invalid_results(keyword)
-        assert len(invalid_res) == 0, f"{len(invalid_res)} search results not related to keyword: {invalid_res}"
+        assert len(invalid_res) == 0, (
+            f"{len(invalid_res)} search results not related to keyword: {invalid_res}"
+        )
         logger.info("✓ Search results are relevant to keyword")
-
 
     @pytest.mark.parametrize("keyword", ["mac", "iphone 16", "清潔"])
     def test_auto_suggest(self, main_page, keyword):
@@ -99,7 +102,6 @@ class TestSearchBar:
             f"All suggestions: {suggestions}"
         )
         logger.info(f"✓ All {len(suggestions)} suggestions contain '{keyword}'")
-
 
     @pytest.mark.parametrize(
         "kw_before, kw_after",
@@ -129,12 +131,15 @@ class TestSearchBar:
             search_res.enter_with_search_box()
 
         search_res.wait_for_page_loaded()
-        assert search_res.is_on_search_result_page(kw_after), "Second search result page failed to load"
+        assert search_res.is_on_search_result_page(kw_after), \
+            "Second search result page failed to load"
 
-        search_res.click_columnType()
+        search_res.click_column_type()
 
         logger.info("Verifying search results relevance ...")
 
         invalid_res = search_res.get_invalid_results(kw_after)
-        assert len(invalid_res) == 0, f"{len(invalid_res)} search results not related to keyword: {invalid_res}"
+        assert len(invalid_res) == 0, (
+            f"{len(invalid_res)} search results not related to keyword: {invalid_res}"
+        )
         logger.info("✓ Search results are relevant to keyword")

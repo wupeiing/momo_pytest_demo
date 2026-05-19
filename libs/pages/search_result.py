@@ -1,13 +1,12 @@
-from typing import List
+import logging
 from urllib.parse import unquote, urlparse, parse_qs
 
 from playwright.sync_api import Locator, Page, expect
 
 from libs.utils.keyword_matcher import KeywordMatcher
 
-import logging
-
 logger = logging.getLogger(__name__)
+
 
 class SearchResultPage:
     SEARCH_INPUT_LOCATOR = 'input[id="header-search-input"]'
@@ -15,7 +14,7 @@ class SearchResultPage:
     SEARCH_LIST_AREA_LOCATOR = "div.bt_2_layout.searchbox.searchListArea"
     SEARCH_LIST_NO_RESULT_LOCATOR = "div.noSearchResultWrapper"
     SEARCH_LIST_NO_RESULT_FUZZY_LOCATOR = "div#errorArea div#isfuzzydiv"
-    
+
     PRODUCT_NAME_LOCATOR = "ul.listAreaUl li.listAreaLi h3.prdName"
     COLUMN_TYPE_ITEM_LOCATOR = "div.listArea.columnType li.listAreaLi"
 
@@ -26,7 +25,7 @@ class SearchResultPage:
 
     def fill_search_box(self, keyword: str) -> None:
         self.search_input.fill(keyword)
-    
+
     def enter_with_search_box(self) -> None:
         self.search_input.press("Enter")
 
@@ -44,26 +43,32 @@ class SearchResultPage:
         logger.info("Search result page loaded")
 
     def _get_url_fuzzy_param(self) -> str:
-        """Return the value of the _isFuzzy query parameter from the current URL, or empty string."""
+        """Return _isFuzzy query param from the current URL, or empty string."""
         params = parse_qs(urlparse(self.page.url).query)
         return params.get("_isFuzzy", [""])[0]
 
     def wait_for_no_results(self, timeout: int = 30000) -> None:
         fuzzy_val = self._get_url_fuzzy_param()
         if fuzzy_val:
-            logger.info(f"URL fuzzy={fuzzy_val!r}, waiting for fuzzy recommendation banner (#errorArea #isfuzzydiv)")
-            expect(self.page.locator(self.SEARCH_LIST_NO_RESULT_FUZZY_LOCATOR)).to_be_visible(timeout=timeout)
+            logger.info(
+                "URL fuzzy=%r, waiting for fuzzy banner (#errorArea #isfuzzydiv)", fuzzy_val
+            )
+            expect(
+                self.page.locator(self.SEARCH_LIST_NO_RESULT_FUZZY_LOCATOR)
+            ).to_be_visible(timeout=timeout)
             logger.info("Fuzzy recommendation banner is visible")
         else:
             logger.info("Waiting for no-results banner (.noSearchResultWrapper)")
-            expect(self.page.locator(self.SEARCH_LIST_NO_RESULT_LOCATOR)).to_be_visible(timeout=timeout)
+            expect(
+                self.page.locator(self.SEARCH_LIST_NO_RESULT_LOCATOR)
+            ).to_be_visible(timeout=timeout)
             logger.info("No-results banner is visible")
 
-    def click_columnType(self) -> None:
+    def click_column_type(self) -> None:
         column_type_locator = self.page.locator("label.columnType")
         expect(column_type_locator).to_be_visible(timeout=10000)
         column_type_locator.click()
-    
+
     def get_invalid_results(self, keyword: str, tolerance: float = 0.6) -> list[str]:
         """
         Check search results, allowing a configurable proportion of unrelated products.
@@ -88,10 +93,10 @@ class SearchResultPage:
             publishing  = _text(li, "a.publishing")
             description = _text(li, "p.description")
 
-            logger.info(f"Checking product: '{prd_name}'")
+            logger.debug("Checking product: '%s'", prd_name)
 
             if any(KeywordMatcher.all_keywords_in_name(keyword, f)
-                for f in [prd_name, publishing, description]):
+                   for f in [prd_name, publishing, description]):
                 continue
 
             url_loc = li.locator("h3.prdName a")
@@ -100,28 +105,30 @@ class SearchResultPage:
 
         invalid_rate = len(invalid) / total_count if total_count > 0 else 0
 
-        logger.info(f"Keyword '{keyword}' validation:")
-        logger.info(f"  Total products: {total_count}")
-        logger.info(f"  Unrelated: {len(invalid)} ({invalid_rate:.1%})")
-        logger.info(f"  Related: {total_count - len(invalid)} ({1-invalid_rate:.1%})")
+        logger.info("Keyword '%s' validation:", keyword)
+        logger.info("  Total products: %s", total_count)
+        logger.info("  Unrelated: %s (%.1f%%)", len(invalid), invalid_rate * 100)
+        logger.info("  Related: %s (%.1f%%)", total_count - len(invalid), (1 - invalid_rate) * 100)
 
         if invalid_rate <= tolerance:
-            logger.info(f"✓ Within tolerance (≤{tolerance:.0%}), considered passing")
+            logger.info("✓ Within tolerance (≤%.0f%%), considered passing", tolerance * 100)
             return []
 
-        logger.warning(f"✗ Exceeded tolerance ({invalid_rate:.1%} > {tolerance:.0%})")
+        logger.warning(
+            "✗ Exceeded tolerance (%.1f%% > %.0f%%)", invalid_rate * 100, tolerance * 100
+        )
         return invalid
 
     def is_on_search_result_page(self, keyword: str) -> bool:
         """
-        Check if currently on the search result page and that the keyword appears in the URL path.
-        Supports multi-word keywords (space-separated); spaces are encoded as %20.
-
-        Returns:
-            bool: True if on the search result page with the expected keyword in the URL.
+        Check if on the search result page with the keyword in the URL path.
+        Supports multi-word keywords; spaces are encoded as %20.
         """
         decoded_url = unquote(self.page.url)
         expected_path = f"/search/{keyword}"
         is_search_page = expected_path in decoded_url
-        logger.info(f"On search result page: {is_search_page} (expected: {expected_path}, decoded URL: {decoded_url})")
+        logger.info(
+            "On search result page: %s (expected: %s, decoded URL: %s)",
+            is_search_page, expected_path, decoded_url,
+        )
         return is_search_page

@@ -1,0 +1,12 @@
+[MASTER]
+init-hook='import sys; sys.path.insert(0, ".")'
+
+[MESSAGES CONTROL]
+disable =
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    logging-fstring-interpolation,
+
+[FORMAT]
+max-line-length = 100

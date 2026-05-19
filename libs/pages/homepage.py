@@ -1,10 +1,10 @@
-from playwright.sync_api import Page, expect
-
 import logging
-import time
 import re
 
+from playwright.sync_api import Page, expect
+
 logger = logging.getLogger(__name__)
+
 
 class HomePageSearchBar:
     HOME_URL = "https://www.momoshop.com.tw/main/Main.jsp"
@@ -31,13 +31,13 @@ class HomePageSearchBar:
             self.page.wait_for_selector(self.SEARCH_INPUT_LOCATOR, timeout=timeout, state="visible")
             logger.info("Homepage loaded")
         except Exception as e:
-            logger.error(f"Homepage load timed out: {e}")
+            logger.error("Homepage load timed out: %s", e)
             raise
 
     def is_on_homepage(self) -> bool:
         current_url = self.page.url
         is_homepage = self.HOME_URL in current_url
-        logger.info(f"On homepage: {is_homepage} (current URL: {current_url})")
+        logger.info("On homepage: %s (current URL: %s)", is_homepage, current_url)
         return is_homepage
 
     def get_placeholder_text(self) -> str:
@@ -55,14 +55,12 @@ class HomePageSearchBar:
         self.search_input.press_sequentially(keyword, delay=delay)
 
     def wait_and_get_suggestion_keywords(self, timeout: int = 5000) -> list[str]:
-        """Wait for the auto-suggestion dropdown to appear and return all suggestion keyword texts."""
+        """Wait for the suggestion dropdown and return all keyword texts."""
         self.page.locator("div.absolute button").first.wait_for(
             state="visible", timeout=timeout
         )
         logger.info("Auto-suggestion dropdown appeared, collecting suggestion items ...")
-        keywords = self.page.locator(
-            self.SUGGESTION_ITEM_LOCATOR
-        ).all_text_contents()
+        keywords = self.page.locator(self.SUGGESTION_ITEM_LOCATOR).all_text_contents()
         for kw in keywords:
             logger.info(kw)
         return keywords
