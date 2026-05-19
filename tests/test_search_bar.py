@@ -99,3 +99,42 @@ class TestSearchBar:
             f"All suggestions: {suggestions}"
         )
         logger.info(f"✓ All {len(suggestions)} suggestions contain '{keyword}'")
+
+
+    @pytest.mark.parametrize(
+        "kw_before, kw_after",
+        [
+            ("apple",  "samsung"),
+            ("iphone",  "iphone 15"),
+            ("足球鞋",   "籃球鞋"),
+        ]
+    )
+    def test_search_in_search_page(self, main_page, kw_before, kw_after):
+        home_search = HomePageSearchBar(main_page)
+        home_search.wait_for_page_load()
+        assert home_search.is_on_homepage(), "Failed to navigate to homepage"
+        logger.info("✓ On homepage")
+
+        logger.info(f"First search: '{kw_before}'")
+        home_search.fill_search_box(kw_before)
+        home_search.click_search_button()
+
+        search_res = SearchResultPage(main_page)
+        search_res.wait_for_page_loaded()
+        assert search_res.is_on_search_result_page(kw_before), "Search result page failed to load"
+
+        logger.info(f"Second search from result page: '{kw_after}'")
+        search_res.fill_search_box(kw_after)
+        with main_page.expect_navigation(timeout=15000):
+            search_res.enter_with_search_box()
+
+        search_res.wait_for_page_loaded()
+        assert search_res.is_on_search_result_page(kw_after), "Second search result page failed to load"
+
+        search_res.click_columnType()
+
+        logger.info("Verifying search results relevance ...")
+
+        invalid_res = search_res.get_invalid_results(kw_after)
+        assert len(invalid_res) == 0, f"{len(invalid_res)} search results not related to keyword: {invalid_res}"
+        logger.info("✓ Search results are relevant to keyword")
