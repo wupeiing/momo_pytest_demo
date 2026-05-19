@@ -12,6 +12,15 @@ class TestSearchBar:
 
     @pytest.mark.parametrize("keyword", ["亂碼測試", "adjefmsdddss"])
     def test_homepage_search_bar_dirct_search_no_results(self, main_page, keyword):
+        """
+        Test that searching a garbage/non-existent keyword shows a no-results page.
+
+        Steps:
+            1. Verify the browser is on the homepage.
+            2. Type a garbage keyword into the search box and click search.
+            3. Verify navigation to the search result page with the keyword in the URL.
+            4. Verify the no-results banner (or fuzzy-match banner) is displayed.
+        """
         home_search = HomePageSearchBar(main_page)
         home_search.wait_for_page_load()
         assert home_search.is_on_homepage(), "Failed to navigate to homepage"
@@ -30,6 +39,17 @@ class TestSearchBar:
         search_res.wait_for_no_results()
 
     def test_homepage_search_bar_placeholder_with_results(self, main_page):
+        """
+        Test that clicking search with the placeholder keyword returns relevant results.
+
+        Steps:
+            1. Verify the browser is on the homepage.
+            2. Read the search box placeholder text as the keyword.
+            3. Click the search button (without typing, using the placeholder as the query).
+            4. Verify navigation to the search result page with the placeholder keyword in the URL.
+            5. Switch to column (list) view.
+            6. Verify all visible products are relevant to the keyword.
+        """
         home_search = HomePageSearchBar(main_page)
         home_search.wait_for_page_load()
         assert home_search.is_on_homepage(), "Failed to navigate to homepage"
@@ -56,6 +76,16 @@ class TestSearchBar:
 
     @pytest.mark.parametrize("keyword", ["macbook", "iphone 15", "衛生紙 舒潔"])
     def test_homepage_search_bar_dirct_search_with_results(self, main_page, keyword):
+        """
+        Test that searching a known keyword returns relevant products.
+
+        Steps:
+            1. Verify the browser is on the homepage.
+            2. Type the keyword into the search box and click search.
+            3. Verify navigation to the search result page with the keyword in the URL.
+            4. Switch to column (list) view.
+            5. Verify all visible products are relevant to the keyword.
+        """
         home_search = HomePageSearchBar(main_page)
         home_search.wait_for_page_load()
         assert home_search.is_on_homepage(), "Failed to navigate to homepage"
@@ -82,6 +112,16 @@ class TestSearchBar:
 
     @pytest.mark.parametrize("keyword", ["mac", "iphone 16", "清潔"])
     def test_auto_suggest(self, main_page, keyword):
+        """
+        Test that typing a keyword triggers auto-suggestions, all containing the keyword.
+
+        Steps:
+            1. Verify the browser is on the homepage.
+            2. Type the keyword character-by-character to trigger the suggestion dropdown.
+            3. Wait for the suggestion dropdown to appear and collect all suggestion texts.
+            4. Verify at least one suggestion is returned.
+            5. Verify every suggestion contains the keyword as a substring.
+        """
         home_search = HomePageSearchBar(main_page)
         home_search.wait_for_page_load()
         assert home_search.is_on_homepage(), "Failed to navigate to homepage"
@@ -112,6 +152,17 @@ class TestSearchBar:
         ]
     )
     def test_search_in_search_page(self, main_page, kw_before, kw_after):
+        """
+        Test that a second search performed from the result page navigates correctly.
+
+        Steps:
+            1. Verify the browser is on the homepage.
+            2. Search for kw_before and verify the search result page loads.
+            3. From the result page, type kw_after into the search box and press Enter.
+            4. Wait for navigation to complete, then verify the new result page URL contains kw_after.
+            5. Switch to column (list) view.
+            6. Verify all visible products are relevant to kw_after.
+        """
         home_search = HomePageSearchBar(main_page)
         home_search.wait_for_page_load()
         assert home_search.is_on_homepage(), "Failed to navigate to homepage"
