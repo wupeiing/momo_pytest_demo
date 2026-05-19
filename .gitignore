@@ -220,3 +220,7 @@ __marimo__/
 # Playwright browser artifacts
 .playwright/
 playwright-report/
+
+
+# ai generated code
+.claude/

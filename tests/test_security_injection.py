@@ -16,7 +16,7 @@ import pytest
 from urllib.parse import unquote
 from playwright.sync_api import Page, Dialog
 
-from lib.pages.homepage import HomePageSearchBar
+from libs.pages.homepage import HomePageSearchBar
 import logging
 
 logger = logging.getLogger(__name__)
