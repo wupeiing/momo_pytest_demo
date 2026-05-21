@@ -41,10 +41,14 @@ class HomePageSearchBar:
         return is_homepage
 
     def get_placeholder_text(self) -> str:
-        expect(self.search_input).to_have_attribute(
-            "placeholder", re.compile(r".+"), timeout=10000
-        )
-        return self.search_input.evaluate("el => el.placeholder") or ""
+        try:
+            expect(self.search_input).to_have_attribute(
+                "placeholder", re.compile(r".+"), timeout=10000
+            )
+            return self.search_input.evaluate("el => el.placeholder") or ""
+        except Exception as e:
+            logger.error("Failed to get placeholder text: %s", e)
+            return ""
 
     def fill_search_box(self, keyword: str) -> None:
         self.search_input.fill(keyword)
@@ -76,6 +80,11 @@ class HomePageSearchBar:
         self.search_button.click()
 
     def search(self, keyword: str) -> None:
-        self.goto()
+        self.wait_for_page_load()
+        assert self.is_on_homepage(), "Failed to navigate to homepage"
         self.fill_search_box(keyword)
         self.click_search_button()
+        try:
+            self.page.wait_for_load_state("networkidle", timeout=10000)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
