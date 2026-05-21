@@ -58,7 +58,7 @@ class TestSearchBar:
 
         Steps:
             1. Verify the browser is on the homepage.
-            2. Read the search box placeholder text as the keyword.
+            2. Read the search box placeholder text as the keyword; skip if empty.
             3. Click the search button (without typing, using the placeholder as the query).
             4. Verify navigation to the search result page with the placeholder keyword in the URL.
             5. Switch to column (list) view.
@@ -70,6 +70,8 @@ class TestSearchBar:
         logger.info("✓ On homepage")
 
         keyword = home_search.get_placeholder_text()
+        if not keyword:
+            pytest.skip("Search box placeholder is empty, skipping test")
         logger.info(f"Search keyword for placeholder: '{keyword}'")
         home_search.click_search_button()
 
@@ -88,7 +90,7 @@ class TestSearchBar:
         )
         logger.info("✓ Search results are relevant to keyword")
 
-    @pytest.mark.parametrize("keyword", ["macbook", "iphone 15", "衛生紙 舒潔"])
+    @pytest.mark.parametrize("keyword", ["macbook", "iphone 15", "衛生紙 舒潔", "無線耳機"])
     def test_homepage_search_bar_dirct_search_with_results(self, main_page, keyword):
         """
         Test that searching a known keyword returns relevant products.

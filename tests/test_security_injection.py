@@ -15,7 +15,7 @@ import logging
 import re
 
 import pytest
-from playwright.sync_api import Page, Dialog
+from playwright.sync_api import Dialog
 
 from libs.pages.homepage import HomePageSearchBar
 
@@ -50,21 +50,6 @@ CMD_OUTPUT_PATTERNS = [
 ]
 
 
-# ── Helper ─────────────────────────────────────────────────────────────────────
-
-def _do_search(page: Page, keyword: str) -> None:
-    """Navigate from homepage and submit *keyword* via the search bar."""
-    home = HomePageSearchBar(page)
-    home.wait_for_page_load()
-    assert home.is_on_homepage(), "未成功進入首頁"
-    home.fill_search_box(keyword)
-    home.click_search_button()
-    try:
-        page.wait_for_load_state("networkidle", timeout=10000)
-    except Exception:  # pylint: disable=broad-exception-caught
-        pass  # continue even if networkidle times out (slow pages)
-
-
 # ── Test class ─────────────────────────────────────────────────────────────────
 
 class TestSecurityInjection:
@@ -86,7 +71,7 @@ class TestSecurityInjection:
         main_page.on("dialog", handle)
 
         logger.info("[XSS] submitting payload: %r", payload)
-        _do_search(main_page, payload)
+        HomePageSearchBar(main_page).search(payload)
 
         assert not dialog_info["fired"], (
             f"XSS succeeded: JS dialog detected, message='{dialog_info['message']}'"
@@ -97,7 +82,7 @@ class TestSecurityInjection:
     def test_xss_dangerous_chars_encoded_in_url(self, main_page, payload):
         """< and > in XSS payloads must be URL-encoded in the resulting URL."""
         logger.info("[XSS] testing URL encoding: %r", payload)
-        _do_search(main_page, payload)
+        HomePageSearchBar(main_page).search(payload)
 
         raw_url = main_page.url
         assert "<" not in raw_url, (
@@ -112,7 +97,7 @@ class TestSecurityInjection:
     def test_xss_no_injected_script_in_dom(self, main_page, payload):
         """XSS payload must not produce alert-containing <script> or event attributes in the DOM."""
         logger.info("[XSS] testing DOM injection: %r", payload)
-        _do_search(main_page, payload)
+        HomePageSearchBar(main_page).search(payload)
 
         injected: list = main_page.evaluate("""
             () => {
@@ -142,7 +127,7 @@ class TestSecurityInjection:
     def test_sql_injection_no_db_error_in_page(self, main_page, payload):
         """SQL injection payload must not cause the page to leak database error messages."""
         logger.info("[SQLi] submitting payload: %r", payload)
-        _do_search(main_page, payload)
+        HomePageSearchBar(main_page).search(payload)
 
         page_text = main_page.locator("body").inner_text()
         found = [
@@ -160,7 +145,7 @@ class TestSecurityInjection:
     def test_sql_injection_single_quote_encoded_in_url(self, main_page, payload):
         """Single quote in SQL injection payload must be encoded as %27 in the URL."""
         logger.info("[SQLi] testing URL encoding: %r", payload)
-        _do_search(main_page, payload)
+        HomePageSearchBar(main_page).search(payload)
 
         raw_url = main_page.url
         assert "'" not in raw_url, (
@@ -174,7 +159,7 @@ class TestSecurityInjection:
     def test_cmd_injection_no_shell_output_in_page(self, main_page, payload):
         """Command injection payload must not cause shell command output to appear on the page."""
         logger.info("[CMDi] submitting payload: %r", payload)
-        _do_search(main_page, payload)
+        HomePageSearchBar(main_page).search(payload)
 
         page_text = main_page.locator("body").inner_text()
         found = [
@@ -192,7 +177,7 @@ class TestSecurityInjection:
     def test_cmd_injection_pipe_encoded_in_url(self, main_page, payload):
         """Pipe | in command injection payload must be encoded as %7C in the URL."""
         logger.info("[CMDi] testing URL encoding: %r", payload)
-        _do_search(main_page, payload)
+        HomePageSearchBar(main_page).search(payload)
 
         raw_url = main_page.url
         # Only check after scheme (host + path + query); scheme itself never contains |
