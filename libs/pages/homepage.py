@@ -46,8 +46,8 @@ class HomePageSearchBar:
                 "placeholder", re.compile(r".+"), timeout=10000
             )
             return self.search_input.evaluate("el => el.placeholder") or ""
-        except Exception as e:
-            logger.error("Failed to get placeholder text: %s", e)
+        except AssertionError as e:
+            logger.warning("Failed to get placeholder text: %s", e)
             return ""
 
     def fill_search_box(self, keyword: str) -> None:
@@ -84,7 +84,4 @@ class HomePageSearchBar:
         assert self.is_on_homepage(), "Failed to navigate to homepage"
         self.fill_search_box(keyword)
         self.click_search_button()
-        try:
-            self.page.wait_for_load_state("networkidle", timeout=10000)
-        except Exception:  # pylint: disable=broad-exception-caught
-            pass
+        self.page.wait_for_load_state("networkidle", timeout=10000)
